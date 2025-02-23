@@ -1,9 +1,12 @@
 use std::{
     fmt::{self, Display, Formatter},
     hash::Hash,
+    str::FromStr,
 };
 
 use serde::{Deserialize, Serialize};
+
+use crate::conversion::ConversionError;
 
 /// Equivalent to a file of bril code
 #[cfg_attr(not(feature = "float"), derive(Eq))]
@@ -364,6 +367,9 @@ pub enum EffectOps {
     /// <https://capra.cs.cornell.edu/bril/lang/spec.html#operations>
     #[cfg(feature = "speculate")]
     Guard,
+    /// <https://capra.cs.cornell.edu/bril/lang/ssa2.html#operations>
+    #[cfg(feature = "ssa")]
+    Upsilon,
 }
 
 impl Display for EffectOps {
@@ -385,7 +391,37 @@ impl Display for EffectOps {
             Self::Commit => write!(f, "commit"),
             #[cfg(feature = "speculate")]
             Self::Guard => write!(f, "guard"),
+            #[cfg(feature = "ssa")]
+            Self::Upsilon => write!(f, "upsilon"),
         }
+    }
+}
+
+impl FromStr for EffectOps {
+    type Err = ConversionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "jmp" => Self::Jump,
+            "br" => Self::Branch,
+            "call" => Self::Call,
+            "ret" => Self::Return,
+            "print" => Self::Print,
+            "nop" => Self::Nop,
+            #[cfg(feature = "memory")]
+            "store" => Self::Store,
+            #[cfg(feature = "memory")]
+            "free" => Self::Free,
+            #[cfg(feature = "speculate")]
+            "speculate" => Self::Speculate,
+            #[cfg(feature = "speculate")]
+            "commit" => Self::Commit,
+            #[cfg(feature = "speculate")]
+            "guard" => Self::Guard,
+            #[cfg(feature = "ssa")]
+            "upsilon" => Self::Upsilon,
+            e => Err(ConversionError::InvalidEffectOps(e.to_string()))?,
+        })
     }
 }
 
@@ -421,9 +457,12 @@ pub enum ValueOps {
     Call,
     /// <https://capra.cs.cornell.edu/bril/lang/core.html#miscellaneous>
     Id,
-    /// <https://capra.cs.cornell.edu/bril/lang/ssa.html#operations>
+    /// <https://capra.cs.cornell.edu/bril/lang/ssa2.html#operations>
     #[cfg(feature = "ssa")]
     Phi,
+    /// <https://capra.cs.cornell.edu/bril/lang/ssa2.html#operations>
+    #[cfg(feature = "ssa")]
+    Undef,
     /// <https://capra.cs.cornell.edu/bril/lang/float.html#operations>
     #[cfg(feature = "float")]
     Fadd,
@@ -481,6 +520,12 @@ pub enum ValueOps {
     /// <https://capra.cs.cornell.edu/bril/lang/memory.html#operations>
     #[cfg(feature = "memory")]
     PtrAdd,
+    /// <https://capra.cs.cornell.edu/bril/lang/bitcast.html#operations>
+    #[cfg(feature = "bitcast")]
+    Float2Bits,
+    /// <https://capra.cs.cornell.edu/bril/lang/bitcast.html#operations>
+    #[cfg(feature = "bitcast")]
+    Bits2Float,
 }
 
 impl Display for ValueOps {
@@ -502,6 +547,8 @@ impl Display for ValueOps {
             Self::Id => write!(f, "id"),
             #[cfg(feature = "ssa")]
             Self::Phi => write!(f, "phi"),
+            #[cfg(feature = "ssa")]
+            Self::Undef => write!(f, "undef"),
             #[cfg(feature = "float")]
             Self::Fadd => write!(f, "fadd"),
             #[cfg(feature = "float")]
@@ -540,7 +587,81 @@ impl Display for ValueOps {
             Self::Load => write!(f, "load"),
             #[cfg(feature = "memory")]
             Self::PtrAdd => write!(f, "ptradd"),
+            #[cfg(feature = "bitcast")]
+            Self::Float2Bits => write!(f, "float2bits"),
+            #[cfg(feature = "bitcast")]
+            Self::Bits2Float => write!(f, "bits2float"),
         }
+    }
+}
+
+impl FromStr for ValueOps {
+    type Err = ConversionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "add" => Self::Add,
+            "mul" => Self::Mul,
+            "div" => Self::Div,
+            "eq" => Self::Eq,
+            "lt" => Self::Lt,
+            "gt" => Self::Gt,
+            "le" => Self::Le,
+            "ge" => Self::Ge,
+            "not" => Self::Not,
+            "and" => Self::And,
+            "or" => Self::Or,
+            "call" => Self::Call,
+            "id" => Self::Id,
+            "sub" => Self::Sub,
+            #[cfg(feature = "ssa")]
+            "phi" => Self::Phi,
+            #[cfg(feature = "ssa")]
+            "undef" => Self::Undef,
+            #[cfg(feature = "float")]
+            "fadd" => Self::Fadd,
+            #[cfg(feature = "float")]
+            "fsub" => Self::Fsub,
+            #[cfg(feature = "float")]
+            "fmul" => Self::Fmul,
+            #[cfg(feature = "float")]
+            "fdiv" => Self::Fdiv,
+            #[cfg(feature = "float")]
+            "feq" => Self::Feq,
+            #[cfg(feature = "float")]
+            "flt" => Self::Flt,
+            #[cfg(feature = "float")]
+            "fgt" => Self::Fgt,
+            #[cfg(feature = "float")]
+            "fle" => Self::Fle,
+            #[cfg(feature = "float")]
+            "fge" => Self::Fge,
+            #[cfg(feature = "char")]
+            "ceq" => Self::Ceq,
+            #[cfg(feature = "char")]
+            "clt" => Self::Clt,
+            #[cfg(feature = "char")]
+            "cgt" => Self::Cgt,
+            #[cfg(feature = "char")]
+            "cle" => Self::Cle,
+            #[cfg(feature = "char")]
+            "cge" => Self::Cge,
+            #[cfg(feature = "char")]
+            "char2int" => Self::Char2int,
+            #[cfg(feature = "char")]
+            "int2char" => Self::Int2char,
+            #[cfg(feature = "memory")]
+            "alloc" => Self::Alloc,
+            #[cfg(feature = "memory")]
+            "load" => Self::Load,
+            #[cfg(feature = "memory")]
+            "ptradd" => Self::PtrAdd,
+            #[cfg(feature = "bitcast")]
+            "bits2float" => Self::Bits2Float,
+            #[cfg(feature = "bitcast")]
+            "float2bits" => Self::Float2Bits,
+            v => Err(ConversionError::InvalidValueOps(v.to_string()))?,
+        })
     }
 }
 
@@ -575,6 +696,22 @@ impl Display for Type {
             Self::Char => write!(f, "char"),
             #[cfg(feature = "memory")]
             Self::Pointer(tpe) => write!(f, "ptr<{tpe}>"),
+        }
+    }
+}
+
+impl FromStr for Type {
+    type Err = ConversionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "int" => Ok(Self::Int),
+            "bool" => Ok(Self::Bool),
+            #[cfg(feature = "float")]
+            "float" => Ok(Self::Float),
+            #[cfg(feature = "char")]
+            "char" => Ok(Self::Char),
+            _ => Err(ConversionError::InvalidPrimitive(s.to_string())),
         }
     }
 }

@@ -1,7 +1,7 @@
 [package]
 name = "brild"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "A rust linker of Bril programs"
 readme = "README.md"
 repository = "https://github.com/sampsyo/bril"
@@ -14,7 +14,7 @@ keywords = ["compiler", "bril", "parser", "data-structures", "language"]
 
 [dependencies]
 clap         = { version = "4.4", features = ["derive"] }
-thiserror    = "1.0"
+thiserror    = "2.0"
 
 [dependencies.bril2json]
 version      = "0.1.0"
